@@ -26,3 +26,16 @@ func TestFormatToolCallsForPromptXML(t *testing.T) {
 		t.Fatalf("unexpected formatted tool call XML: %q", got)
 	}
 }
+
+func TestFormatToolCallsForPromptEscapesXMLEntities(t *testing.T) {
+	got := FormatToolCallsForPrompt([]any{
+		map[string]any{
+			"name":      "search<&>",
+			"arguments": `{"q":"a < b && c > d"}`,
+		},
+	})
+	want := "<tool_calls>\n  <tool_call>\n    <tool_name>search&lt;&amp;&gt;</tool_name>\n    <parameters>{\"q\":\"a &lt; b &amp;&amp; c &gt; d\"}</parameters>\n  </tool_call>\n</tool_calls>"
+	if got != want {
+		t.Fatalf("unexpected escaped tool call XML: %q", got)
+	}
+}

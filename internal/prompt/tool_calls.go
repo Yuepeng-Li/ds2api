@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+var promptXMLTextEscaper = strings.NewReplacer(
+	"&", "&amp;",
+	"<", "&lt;",
+	">", "&gt;",
+)
+
 // FormatToolCallsForPrompt renders a tool_calls slice into the canonical
 // prompt-visible history block used across adapters.
 func FormatToolCallsForPrompt(raw any) string {
@@ -82,8 +88,8 @@ func formatToolCallForPrompt(call map[string]any) string {
 	}
 
 	return "  <tool_call>\n" +
-		"    <tool_name>" + name + "</tool_name>\n" +
-		"    <parameters>" + StringifyToolCallArguments(argsRaw) + "</parameters>\n" +
+		"    <tool_name>" + escapeXMLText(name) + "</tool_name>\n" +
+		"    <parameters>" + escapeXMLText(StringifyToolCallArguments(argsRaw)) + "</parameters>\n" +
 		"  </tool_call>"
 }
 
@@ -121,4 +127,11 @@ func asString(v any) string {
 		return s
 	}
 	return ""
+}
+
+func escapeXMLText(v string) string {
+	if v == "" {
+		return ""
+	}
+	return promptXMLTextEscaper.Replace(v)
 }

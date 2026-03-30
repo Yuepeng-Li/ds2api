@@ -23,6 +23,9 @@ var leakedAgentXMLBlockPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?is)<new_task\b[^>]*>(.*?)</new_task>`),
 }
 
+var leakedAgentWrapperTagPattern = regexp.MustCompile(`(?is)</?(?:attempt_completion|ask_followup_question|new_task)\b[^>]*>`)
+var leakedAgentWrapperPlusResultOpenPattern = regexp.MustCompile(`(?is)<(?:attempt_completion|ask_followup_question|new_task)\b[^>]*>\s*<result>`)
+var leakedAgentResultPlusWrapperClosePattern = regexp.MustCompile(`(?is)</result>\s*</(?:attempt_completion|ask_followup_question|new_task)\b[^>]*>`)
 var leakedAgentResultTagPattern = regexp.MustCompile(`(?is)</?result>`)
 
 func sanitizeLeakedOutput(text string) string {
@@ -49,6 +52,19 @@ func sanitizeLeakedAgentXMLBlocks(text string) string {
 			// the actual answer, but strip the wrapper/result markup itself.
 			return leakedAgentResultTagPattern.ReplaceAllString(submatches[1], "")
 		})
+	}
+	// Fallback for truncated output streams: strip any dangling wrapper tags
+	// that were not part of a complete block replacement. If we detect leaked
+	// wrapper tags, strip only adjacent <result> tags to avoid exposing agent
+	// markup without altering unrelated user-visible <result> examples.
+	if leakedAgentWrapperTagPattern.MatchString(out) {
+		out = leakedAgentWrapperPlusResultOpenPattern.ReplaceAllStringFunc(out, func(match string) string {
+			return leakedAgentResultTagPattern.ReplaceAllString(match, "")
+		})
+		out = leakedAgentResultPlusWrapperClosePattern.ReplaceAllStringFunc(out, func(match string) string {
+			return leakedAgentResultTagPattern.ReplaceAllString(match, "")
+		})
+		out = leakedAgentWrapperTagPattern.ReplaceAllString(out, "")
 	}
 	return out
 }

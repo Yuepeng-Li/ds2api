@@ -41,3 +41,28 @@ func TestSanitizeLeakedOutputPreservesStandaloneResultTags(t *testing.T) {
 		t.Fatalf("unexpected sanitize result for standalone result tag: %q", got)
 	}
 }
+
+func TestSanitizeLeakedOutputRemovesDanglingAgentXMLOpeningTags(t *testing.T) {
+	raw := "Done.<attempt_completion><result>Some final answer"
+	got := sanitizeLeakedOutput(raw)
+	if got != "Done.Some final answer" {
+		t.Fatalf("unexpected sanitize result for dangling opening tags: %q", got)
+	}
+}
+
+func TestSanitizeLeakedOutputRemovesDanglingAgentXMLClosingTags(t *testing.T) {
+	raw := "Done.Some final answer</result></attempt_completion>"
+	got := sanitizeLeakedOutput(raw)
+	if got != "Done.Some final answer" {
+		t.Fatalf("unexpected sanitize result for dangling closing tags: %q", got)
+	}
+}
+
+func TestSanitizeLeakedOutputPreservesUnrelatedResultTagsWhenWrapperLeaks(t *testing.T) {
+	raw := "Done.<attempt_completion><result>Some final answer\nExample XML: <result>value</result>"
+	got := sanitizeLeakedOutput(raw)
+	want := "Done.Some final answer\nExample XML: <result>value</result>"
+	if got != want {
+		t.Fatalf("unexpected sanitize result for mixed leaked wrapper + xml example: %q", got)
+	}
+}
