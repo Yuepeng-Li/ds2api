@@ -7,12 +7,9 @@ func findQuotedFunctionCallKeyStart(s string) int {
 	quotedIdx := findFunctionCallKeyStart(lower, `"functioncall"`)
 	bareIdx := findFunctionCallKeyStart(lower, "functioncall")
 
-	// Prefer quoted JSON keys when present. Bare-key detection is a fallback
-	// for loose payloads like {functionCall:{...}}.
-	//
-	// This avoids anchoring on earlier prose such as:
-	//   "... {note} functionCall: ... {\"functionCall\":{...}}"
-	// where choosing the earliest bare match can hide the real tool payload.
+	// Prefer the quoted JSON key whenever we have a structural match.
+	// Bare-key detection is only for loose payloads where the quoted form
+	// is absent.
 	if quotedIdx >= 0 {
 		return quotedIdx
 	}
@@ -26,6 +23,10 @@ func findFunctionCallKeyStart(lower, key string) int {
 			return -1
 		}
 		idx := from + rel
+		if isInsideJSONString(lower, idx) {
+			from = idx + 1
+			continue
+		}
 		if !hasJSONObjectContextPrefix(lower[:idx]) {
 			from = idx + 1
 			continue
@@ -39,11 +40,39 @@ func findFunctionCallKeyStart(lower, key string) int {
 			j++
 		}
 		if j < len(lower) && lower[j] == ':' {
+			k := j + 1
+			for k < len(lower) && (lower[k] == ' ' || lower[k] == '\t' || lower[k] == '\r' || lower[k] == '\n') {
+				k++
+			}
+			if k < len(lower) && lower[k] != '{' {
+				from = idx + 1
+				continue
+			}
 			return idx
 		}
 		from = idx + 1
 	}
 	return -1
+}
+
+func isInsideJSONString(s string, idx int) bool {
+	inString := false
+	escaped := false
+	for i := 0; i < idx; i++ {
+		c := s[i]
+		if escaped {
+			escaped = false
+			continue
+		}
+		if c == '\\' && inString {
+			escaped = true
+			continue
+		}
+		if c == '"' {
+			inString = !inString
+		}
+	}
+	return inString
 }
 
 func hasJSONObjectContextPrefix(prefix string) bool {
