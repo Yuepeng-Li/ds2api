@@ -453,13 +453,25 @@ func TestHandleResponsesNonStreamReturns429WhenUpstreamHasOnlyThinking(t *testin
 	}
 
 	h.handleResponsesNonStream(rec, resp, "owner-a", "resp_test", "deepseek-v4-pro", "prompt", 0, true, false, nil, nil, promptcompat.DefaultToolChoicePolicy(), "")
-	if rec.Code != http.StatusTooManyRequests {
-		t.Fatalf("expected 429 for thinking-only upstream output, got %d body=%s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for thinking-only upstream output, got %d body=%s", rec.Code, rec.Body.String())
 	}
 	out := decodeJSONBody(t, rec.Body.String())
-	errObj, _ := out["error"].(map[string]any)
-	if asString(errObj["code"]) != "upstream_empty_output" {
-		t.Fatalf("expected code=upstream_empty_output, got %#v", out)
+	output, _ := out["output"].([]any)
+	if len(output) == 0 {
+		t.Fatal("expected at least one output item")
+	}
+	first, _ := output[0].(map[string]any)
+	content, _ := first["content"].([]any)
+	if len(content) == 0 {
+		t.Fatal("expected at least one content item")
+	}
+	firstContent, _ := content[0].(map[string]any)
+	if asString(firstContent["type"]) != "reasoning" {
+		t.Fatalf("expected reasoning type, got %v", firstContent["type"])
+	}
+	if asString(firstContent["text"]) != "Only thinking" {
+		t.Fatalf("expected text='Only thinking', got %v", firstContent["text"])
 	}
 }
 

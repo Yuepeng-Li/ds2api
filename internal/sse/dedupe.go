@@ -4,9 +4,6 @@ import "strings"
 
 const minContinuationSnapshotLen = 32
 
-// TrimContinuationOverlap removes the already-seen prefix when DeepSeek
-// continue rounds resend the full fragment snapshot instead of only the new
-// suffix. Non-overlapping chunks are returned unchanged.
 func TrimContinuationOverlap(existing, incoming string) string {
 	if incoming == "" {
 		return ""
@@ -14,11 +11,44 @@ func TrimContinuationOverlap(existing, incoming string) string {
 	if existing == "" {
 		return incoming
 	}
-	if len(incoming) >= minContinuationSnapshotLen && strings.HasPrefix(incoming, existing) {
-		return incoming[len(existing):]
+	if len(incoming) < minContinuationSnapshotLen {
+		return incoming
 	}
-	if len(incoming) >= minContinuationSnapshotLen && strings.HasPrefix(existing, incoming) {
+	if len(incoming) > len(existing) {
+		if strings.HasPrefix(incoming, existing) {
+			return incoming[len(existing):]
+		}
+		return incoming
+	}
+	if len(incoming) < len(existing) && strings.HasPrefix(existing, incoming) {
 		return ""
+	}
+	return incoming
+}
+
+func TrimContinuationOverlapFromBuilder(existing *strings.Builder, incoming string) string {
+	if incoming == "" {
+		return ""
+	}
+	if existing == nil || existing.Len() == 0 {
+		return incoming
+	}
+	if len(incoming) < minContinuationSnapshotLen {
+		return incoming
+	}
+	existingLen := existing.Len()
+	if len(incoming) > existingLen {
+		existingStr := existing.String()
+		if strings.HasPrefix(incoming, existingStr) {
+			return incoming[existingLen:]
+		}
+		return incoming
+	}
+	if len(incoming) < existingLen {
+		existingStr := existing.String()
+		if strings.HasPrefix(existingStr, incoming) {
+			return ""
+		}
 	}
 	return incoming
 }

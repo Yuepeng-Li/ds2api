@@ -108,8 +108,8 @@ func replaceCitationMarkersWithLinks(text string, links map[int]string) string {
 	return shared.ReplaceCitationMarkersWithLinks(text, links)
 }
 
-func shouldWriteUpstreamEmptyOutputError(text string) bool {
-	return shared.ShouldWriteUpstreamEmptyOutputError(text)
+func shouldWriteUpstreamEmptyOutputError(text, thinking string) bool {
+	return shared.ShouldWriteUpstreamEmptyOutputError(text, thinking)
 }
 
 func upstreamEmptyOutputDetail(contentFilter bool, text, thinking string) (int, string, string) {

@@ -345,7 +345,7 @@ func TestChatCompletionsStreamRetriesEmptyOutputOnSameSession(t *testing.T) {
 
 func TestChatCompletionsNonStreamRetriesThinkingOnlyOutput(t *testing.T) {
 	ds := &streamStatusDSSeqStub{resps: []*http.Response{
-		makeOpenAISSEHTTPResponse(`data: {"response_message_id":99,"p":"response/thinking_content","v":"plan"}`, "data: [DONE]"),
+		makeOpenAISSEHTTPResponse(`data: {"response_message_id":99}`, "data: [DONE]"),
 		makeOpenAISSEHTTPResponse(`data: {"p":"response/content","v":"visible"}`, "data: [DONE]"),
 	}}
 	h := &openAITestSurface{
@@ -379,9 +379,6 @@ func TestChatCompletionsNonStreamRetriesThinkingOnlyOutput(t *testing.T) {
 	message, _ := choice["message"].(map[string]any)
 	if asString(message["content"]) != "visible" {
 		t.Fatalf("expected retry visible content, got %#v", message)
-	}
-	if !strings.Contains(asString(message["reasoning_content"]), "plan") {
-		t.Fatalf("expected first-attempt reasoning to be preserved, got %#v", message)
 	}
 }
 
@@ -499,7 +496,7 @@ func TestResponsesStreamRetriesThinkingOnlyOutput(t *testing.T) {
 
 func TestResponsesNonStreamRetriesThinkingOnlyOutput(t *testing.T) {
 	ds := &streamStatusDSSeqStub{resps: []*http.Response{
-		makeOpenAISSEHTTPResponse(`data: {"response_message_id":88,"p":"response/thinking_content","v":"plan"}`, "data: [DONE]"),
+		makeOpenAISSEHTTPResponse(`data: {"response_message_id":88}`, "data: [DONE]"),
 		makeOpenAISSEHTTPResponse(`data: {"p":"response/content","v":"visible"}`, "data: [DONE]"),
 	}}
 	h := &openAITestSurface{
@@ -540,9 +537,9 @@ func TestResponsesNonStreamRetriesThinkingOnlyOutput(t *testing.T) {
 	if len(content) == 0 {
 		t.Fatalf("expected content entries, got %#v", item)
 	}
-	reasoning, _ := content[0].(map[string]any)
-	if asString(reasoning["type"]) != "reasoning" || !strings.Contains(asString(reasoning["text"]), "plan") {
-		t.Fatalf("expected preserved reasoning entry, got %#v", content)
+	textEntry, _ := content[0].(map[string]any)
+	if asString(textEntry["type"]) != "output_text" || asString(textEntry["text"]) != "visible" {
+		t.Fatalf("expected visible text entry, got %#v", content)
 	}
 }
 

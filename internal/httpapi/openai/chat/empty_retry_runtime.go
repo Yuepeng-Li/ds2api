@@ -109,7 +109,7 @@ func (h *Handler) collectChatNonStreamAttempt(w http.ResponseWriter, resp *http.
 }
 
 func (h *Handler) finishChatNonStreamResult(w http.ResponseWriter, result chatNonStreamResult, attempts int, usagePrompt string, refFileTokens int, historySession *chatHistorySession) {
-	if result.detectedCalls == 0 && shouldWriteUpstreamEmptyOutputError(result.text) {
+	if result.detectedCalls == 0 && shouldWriteUpstreamEmptyOutputError(result.text, result.thinking) {
 		status, message, code := upstreamEmptyOutputDetail(result.contentFilter, result.text, result.thinking)
 		if historySession != nil {
 			historySession.error(status, message, code, result.thinking, result.text)
@@ -143,7 +143,8 @@ func shouldRetryChatNonStream(result chatNonStreamResult, attempts int) bool {
 		attempts < emptyOutputRetryMaxAttempts() &&
 		!result.contentFilter &&
 		result.detectedCalls == 0 &&
-		strings.TrimSpace(result.text) == ""
+		strings.TrimSpace(result.text) == "" &&
+		strings.TrimSpace(result.thinking) == ""
 }
 
 func (h *Handler) handleStreamWithRetry(w http.ResponseWriter, r *http.Request, a *auth.RequestAuth, resp *http.Response, payload map[string]any, pow, completionID, model, finalPrompt string, refFileTokens int, thinkingEnabled, searchEnabled bool, toolNames []string, toolsRaw any, historySession *chatHistorySession) {

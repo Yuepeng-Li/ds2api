@@ -1,7 +1,7 @@
 'use strict';
 
-const MIN_DELTA_FLUSH_CHARS = 160;
-const MAX_DELTA_FLUSH_WAIT_MS = 80;
+const MIN_DELTA_FLUSH_CHARS = 16;
+const MAX_DELTA_FLUSH_WAIT_MS = 20;
 
 function createChatCompletionEmitter({ res, sessionID, created, model, isClosed }) {
   let firstChunkSent = false;

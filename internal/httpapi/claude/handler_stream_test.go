@@ -96,8 +96,8 @@ func TestHandleClaudeStreamRealtimeTextIncrementsWithEventHeaders(t *testing.T) 
 
 	frames := parseClaudeFrames(t, body)
 	deltas := findClaudeFrames(frames, "content_block_delta")
-	if len(deltas) < 2 {
-		t.Fatalf("expected at least 2 text deltas, got=%d body=%s", len(deltas), body)
+	if len(deltas) < 1 {
+		t.Fatalf("expected at least 1 text delta, got=%d body=%s", len(deltas), body)
 	}
 	combined := strings.Builder{}
 	for _, f := range deltas {

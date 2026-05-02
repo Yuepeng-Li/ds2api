@@ -129,7 +129,8 @@ func shouldRetryResponsesNonStream(result responsesNonStreamResult, attempts int
 		attempts < emptyOutputRetryMaxAttempts() &&
 		!result.contentFilter &&
 		len(result.parsed.Calls) == 0 &&
-		strings.TrimSpace(result.text) == ""
+		strings.TrimSpace(result.text) == "" &&
+		strings.TrimSpace(result.thinking) == ""
 }
 
 func (h *Handler) handleResponsesStreamWithRetry(w http.ResponseWriter, r *http.Request, a *auth.RequestAuth, resp *http.Response, payload map[string]any, pow, owner, responseID, model, finalPrompt string, refFileTokens int, thinkingEnabled, searchEnabled bool, toolNames []string, toolsRaw any, toolChoice promptcompat.ToolChoicePolicy, traceID string) {

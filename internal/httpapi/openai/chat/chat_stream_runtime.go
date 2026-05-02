@@ -280,52 +280,40 @@ func (s *chatStreamRuntime) onParsed(parsed sse.LineResult) streamengine.ParsedD
 	contentSeen := false
 	batch := chatDeltaBatch{runtime: s}
 	for _, p := range parsed.ToolDetectionThinkingParts {
-		trimmed := sse.TrimContinuationOverlap(s.toolDetectionThinking.String(), p.Text)
+		trimmed := sse.TrimContinuationOverlapFromBuilder(&s.toolDetectionThinking, p.Text)
 		if trimmed != "" {
 			s.toolDetectionThinking.WriteString(trimmed)
 		}
 	}
 	for _, p := range parsed.Parts {
 		if p.Type == "thinking" {
-			rawTrimmed := sse.TrimContinuationOverlap(s.rawThinking.String(), p.Text)
-			if rawTrimmed != "" {
-				s.rawThinking.WriteString(rawTrimmed)
-				contentSeen = true
-			}
+			s.rawThinking.WriteString(p.Text)
+			contentSeen = true
 			if s.thinkingEnabled {
-				cleanedText := cleanVisibleOutput(rawTrimmed, s.stripReferenceMarkers)
+				cleanedText := cleanVisibleOutput(p.Text, s.stripReferenceMarkers)
 				if cleanedText == "" {
 					continue
 				}
-				trimmed := sse.TrimContinuationOverlap(s.thinking.String(), cleanedText)
-				if trimmed == "" {
-					continue
-				}
-				s.thinking.WriteString(trimmed)
-				batch.append("reasoning_content", trimmed)
+				s.thinking.WriteString(cleanedText)
+				batch.append("reasoning_content", cleanedText)
 			}
 		} else {
-			rawTrimmed := sse.TrimContinuationOverlap(s.rawText.String(), p.Text)
-			if rawTrimmed == "" {
-				continue
-			}
-			s.rawText.WriteString(rawTrimmed)
+			s.rawText.WriteString(p.Text)
 			contentSeen = true
-			cleanedText := cleanVisibleOutput(rawTrimmed, s.stripReferenceMarkers)
+			cleanedText := cleanVisibleOutput(p.Text, s.stripReferenceMarkers)
 			if s.searchEnabled && sse.IsCitation(cleanedText) {
 				continue
 			}
-			trimmed := sse.TrimContinuationOverlap(s.text.String(), cleanedText)
-			if trimmed != "" {
-				s.text.WriteString(trimmed)
+			if cleanedText != "" {
+				s.text.WriteString(cleanedText)
 			}
 			if !s.bufferToolContent {
-				if trimmed == "" {
+				if cleanedText == "" {
 					continue
 				}
-				batch.append("content", trimmed)
+				batch.append("content", cleanedText)
 			} else {
-				events := toolstream.ProcessChunk(&s.toolSieve, rawTrimmed, s.toolNames)
+				events := toolstream.ProcessChunk(&s.toolSieve, p.Text, s.toolNames)
 				for _, evt := range events {
 					if len(evt.ToolCallDeltas) > 0 {
 						if !s.emitEarlyToolDeltas {

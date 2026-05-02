@@ -231,57 +231,45 @@ func (s *responsesStreamRuntime) onParsed(parsed sse.LineResult) streamengine.Pa
 	contentSeen := false
 	batch := responsesDeltaBatch{runtime: s}
 	for _, p := range parsed.ToolDetectionThinkingParts {
-		trimmed := sse.TrimContinuationOverlap(s.toolDetectionThinking.String(), p.Text)
+		trimmed := sse.TrimContinuationOverlapFromBuilder(&s.toolDetectionThinking, p.Text)
 		if trimmed != "" {
 			s.toolDetectionThinking.WriteString(trimmed)
 		}
 	}
 	for _, p := range parsed.Parts {
 		if p.Type == "thinking" {
-			rawTrimmed := sse.TrimContinuationOverlap(s.rawThinking.String(), p.Text)
-			if rawTrimmed != "" {
-				s.rawThinking.WriteString(rawTrimmed)
-				contentSeen = true
-			}
+			s.rawThinking.WriteString(p.Text)
+			contentSeen = true
 			if !s.thinkingEnabled {
 				continue
 			}
-			cleanedText := cleanVisibleOutput(rawTrimmed, s.stripReferenceMarkers)
+			cleanedText := cleanVisibleOutput(p.Text, s.stripReferenceMarkers)
 			if cleanedText == "" {
 				continue
 			}
-			trimmed := sse.TrimContinuationOverlap(s.thinking.String(), cleanedText)
-			if trimmed == "" {
-				continue
-			}
-			s.thinking.WriteString(trimmed)
-			batch.append("reasoning", trimmed)
+			s.thinking.WriteString(cleanedText)
+			batch.append("reasoning", cleanedText)
 			continue
 		}
 
-		rawTrimmed := sse.TrimContinuationOverlap(s.rawText.String(), p.Text)
-		if rawTrimmed == "" {
-			continue
-		}
-		s.rawText.WriteString(rawTrimmed)
+		s.rawText.WriteString(p.Text)
 		contentSeen = true
-		cleanedText := cleanVisibleOutput(rawTrimmed, s.stripReferenceMarkers)
+		cleanedText := cleanVisibleOutput(p.Text, s.stripReferenceMarkers)
 		if s.searchEnabled && sse.IsCitation(cleanedText) {
 			continue
 		}
-		trimmed := sse.TrimContinuationOverlap(s.text.String(), cleanedText)
-		if trimmed != "" {
-			s.text.WriteString(trimmed)
+		if cleanedText != "" {
+			s.text.WriteString(cleanedText)
 		}
 		if !s.bufferToolContent {
-			if trimmed == "" {
+			if cleanedText == "" {
 				continue
 			}
-			batch.append("text", trimmed)
+			batch.append("text", cleanedText)
 			continue
 		}
 		batch.flush()
-		s.processToolStreamEvents(toolstream.ProcessChunk(&s.sieve, rawTrimmed, s.toolNames), true, true)
+		s.processToolStreamEvents(toolstream.ProcessChunk(&s.sieve, p.Text, s.toolNames), true, true)
 	}
 
 	batch.flush()
